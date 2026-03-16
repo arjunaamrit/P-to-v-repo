@@ -1,0 +1,5 @@
+{
+  "name": "snubkey",
+  "description": "An AI-powered educational video generator that converts prompts into animated scenes using RAG and Gemini.",
+  "requestFramePermissions": []
+}
