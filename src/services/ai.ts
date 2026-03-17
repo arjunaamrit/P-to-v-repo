@@ -306,6 +306,7 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
     10. Use "delay" (seconds) to offset the animation start within its scene window.
     11. Use "duration" (seconds) to control how long the animation takes to complete.
     12. Add "soundEffects" to scenes for impactful moments (e.g., "whoosh", "ding", "sparkle"). Use descriptive names for URLs (e.g., "https://assets.mixkit.co/sfx/preview/mixkit-fast-whoosh-1182.mp3").
+    13. DYNAMIC BACKGROUNDS: Choose background colors that match the scene's mood. If keywords like 'space', 'ocean', or 'forest' are present, use '#000020', '#004466', or '#224422' respectively.
   `;
 
   try {
@@ -382,7 +383,18 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
     });
 
     const cleanedText = extractJSON(response.text);
-    return JSON.parse(cleanedText) as AnimationPlan;
+    const plan = JSON.parse(cleanedText) as AnimationPlan;
+
+    // Post-process to ensure dynamic backgrounds based on keywords
+    plan.scenes = plan.scenes.map(scene => {
+      const narration = scene.narration.toLowerCase();
+      if (narration.includes('space')) scene.background = '#000020';
+      else if (narration.includes('ocean') || narration.includes('sea')) scene.background = '#004466';
+      else if (narration.includes('forest') || narration.includes('jungle')) scene.background = '#224422';
+      return scene;
+    });
+
+    return plan;
   } catch (err) {
     if (retryCount < 2) return generateAnimationPlan(sceneDescriptions, retryCount + 1);
     throw err;
