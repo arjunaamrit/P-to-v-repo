@@ -46,11 +46,22 @@ export const Element: React.FC<{
     top: `${element.position.y}%`,
     transform: `translate(-50%, -50%) translate(${slideX}px, ${slideY + nodY}px) scale(${scale}) rotate(${rotation}deg)`,
     opacity,
+    zIndex: element.type === 'text' ? 50 : element.type === 'interactive-button' ? 60 : 10,
   };
 
   if (element.type === 'text') {
     return (
-      <div style={{ ...style, color: 'white', fontSize: 60, fontWeight: 'bold', textAlign: 'center', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>
+      <div style={{ 
+        ...style, 
+        color: 'white', 
+        fontSize: 60, 
+        fontWeight: 'bold', 
+        textAlign: 'center', 
+        textShadow: '0 4px 10px rgba(0,0,0,0.5)',
+        maxWidth: '800px',
+        lineHeight: 1.1,
+        wordWrap: 'break-word'
+      }}>
         {element.content}
       </div>
     );

@@ -284,13 +284,28 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
     2. Elements: text, shape, icon, character, image, interactive-button.
     3. Animations: fade, slide, bounce, zoom, wave, point, nod.
     4. Transitions: fade, slide-left, slide-right, zoom, wipe, flip, none.
-    5. Coordinates: 0-100.
-    6. For "image" elements, use provided image URLs if available, otherwise describe a prompt.
-    7. Use "intensity" (0.5 to 2.0) to control animation speed/scale.
-    8. Use "direction" for "slide" animations to control entry point.
-    9. Use "delay" (seconds) to offset the animation start within its scene window.
-    10. Use "duration" (seconds) to control how long the animation takes to complete.
-    11. Add "soundEffects" to scenes for impactful moments (e.g., "whoosh", "ding", "sparkle"). Use descriptive names for URLs (e.g., "https://assets.mixkit.co/sfx/preview/mixkit-fast-whoosh-1182.mp3").
+    5. Coordinates: 0-100. (0,0 is top-left, 100,100 is bottom-right).
+    6. SPATIAL LAYOUT & COMPOSITION: 
+       - Avoid overlapping elements unless intentional.
+       - Keep important content within the "Safe Zone" (10-90 on both axes).
+       - COMPOSITION GUIDE:
+         - CENTERED: x=50, y=50.
+         - TOP-THIRD: y=30.
+         - BOTTOM-THIRD: y=70.
+         - LEFT-SIDE: x=25.
+         - RIGHT-SIDE: x=75.
+       - COLLISION AVOIDANCE:
+         - SUBTITLE AREA: Avoid placing critical elements below y=80, as subtitles appear there.
+         - If an image is at (25, 50), place text at (75, 50).
+         - If a character is at (80, 80), place titles at (50, 20).
+         - Elements with overlapping time windows MUST have distinct positions.
+         - Images are large (approx 40% of screen), so give them space.
+    7. For "image" elements, use provided image URLs if available, otherwise describe a prompt.
+    8. Use "intensity" (0.5 to 2.0) to control animation speed/scale.
+    9. Use "direction" for "slide" animations to control entry point.
+    10. Use "delay" (seconds) to offset the animation start within its scene window.
+    11. Use "duration" (seconds) to control how long the animation takes to complete.
+    12. Add "soundEffects" to scenes for impactful moments (e.g., "whoosh", "ding", "sparkle"). Use descriptive names for URLs (e.g., "https://assets.mixkit.co/sfx/preview/mixkit-fast-whoosh-1182.mp3").
   `;
 
   try {

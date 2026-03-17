@@ -26,11 +26,12 @@ export const Scene: React.FC<{ scene: SceneType }> = ({ scene }) => {
       {/* Subtitles */}
       <div style={{
         position: 'absolute',
-        bottom: 100,
+        bottom: 60,
         left: 0,
         right: 0,
         textAlign: 'center',
-        padding: '0 50px'
+        padding: '0 50px',
+        zIndex: 100
       }}>
         <div style={{
           display: 'inline-block',
