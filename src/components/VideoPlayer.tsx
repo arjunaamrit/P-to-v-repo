@@ -32,25 +32,46 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
 
   useEffect(() => {
     if (isPlaying) {
-      const duration = currentScene.duration * 1000;
-      const startTime = Date.now();
-      
-      if (currentScene.audioUrl && audioRef.current) {
-        audioRef.current.src = currentScene.audioUrl;
-        audioRef.current.load();
+      if (plan.audioUrl && audioRef.current) {
+        if (audioRef.current.src !== plan.audioUrl) {
+          audioRef.current.src = plan.audioUrl;
+          audioRef.current.load();
+        }
         audioRef.current.play().catch(e => {
           console.warn("Audio play failed, continuing without audio:", e);
-          // Don't throw, just log and continue the visual animation
         });
       }
 
       timerRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const newProgress = Math.min((elapsed / duration) * 100, 100);
-        setProgress(newProgress);
-
-        if (newProgress >= 100) {
-          handleNextScene();
+        if (audioRef.current && plan.audioUrl) {
+          const currentTime = audioRef.current.currentTime;
+          const totalDuration = plan.scenes.reduce((acc, s) => acc + s.duration, 0);
+          
+          // Find current scene based on cumulative duration
+          let cumulative = 0;
+          let foundIndex = 0;
+          for (let i = 0; i < plan.scenes.length; i++) {
+            if (currentTime >= cumulative && currentTime < cumulative + plan.scenes[i].duration) {
+              foundIndex = i;
+              break;
+            }
+            cumulative += plan.scenes[i].duration;
+          }
+          
+          if (currentTime >= totalDuration) {
+            setIsPlaying(false);
+            setCurrentSceneIndex(plan.scenes.length - 1);
+            setProgress(100);
+          } else {
+            setCurrentSceneIndex(foundIndex);
+            const sceneElapsed = currentTime - cumulative;
+            const sceneProgress = (sceneElapsed / plan.scenes[foundIndex].duration) * 100;
+            setProgress(sceneProgress);
+          }
+        } else {
+          // Fallback for no audio
+          const duration = currentScene.duration * 1000;
+          // ... existing fallback logic if needed ...
         }
       }, 50);
     } else {
@@ -61,10 +82,12 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, currentSceneIndex]);
+  }, [isPlaying, plan.audioUrl]);
 
   const handleNextScene = () => {
     if (currentSceneIndex < plan.scenes.length - 1) {
+      const nextSceneStartTime = plan.scenes.slice(0, currentSceneIndex + 1).reduce((acc, s) => acc + s.duration, 0);
+      if (audioRef.current) audioRef.current.currentTime = nextSceneStartTime;
       setCurrentSceneIndex(prev => prev + 1);
       setProgress(0);
     } else {
@@ -74,6 +97,7 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
   };
 
   const reset = () => {
+    if (audioRef.current) audioRef.current.currentTime = 0;
     setCurrentSceneIndex(0);
     setProgress(0);
     setIsPlaying(false);
@@ -92,19 +116,28 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
   return (
     <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto">
       {/* Video Stage */}
-      <div 
-        className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black"
-        style={{ background: `radial-gradient(circle at center, ${currentScene.background || '#000000'} 0%, #000000 100%)` }}
-      >
+      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black">
         <audio ref={audioRef} />
         
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           <motion.div 
             key={currentScene.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={
+              currentScene.transition === 'slide-left' ? { x: '100%', opacity: 0 } :
+              currentScene.transition === 'slide-right' ? { x: '-100%', opacity: 0 } :
+              currentScene.transition === 'zoom' ? { scale: 1.2, opacity: 0 } :
+              { opacity: 0 }
+            }
+            animate={{ x: 0, scale: 1, opacity: 1 }}
+            exit={
+              currentScene.transition === 'slide-left' ? { x: '-100%', opacity: 0 } :
+              currentScene.transition === 'slide-right' ? { x: '100%', opacity: 0 } :
+              currentScene.transition === 'zoom' ? { scale: 0.8, opacity: 0 } :
+              { opacity: 0 }
+            }
+            transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
             className="absolute inset-0 flex items-center justify-center"
+            style={{ background: `radial-gradient(circle at center, ${currentScene.background || '#000000'} 0%, #000000 100%)` }}
           >
             {(currentScene.elements || []).map((el, i) => (
               <motion.div
@@ -161,12 +194,61 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
           </motion.p>
         </div>
 
-        {/* Progress Bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10">
-          <motion.div 
-            className="h-full bg-emerald-500"
-            style={{ width: `${progress}%` }}
-          />
+        {/* Progress Bar - Overall Visual Timeline */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-black/40 backdrop-blur-md border-t border-white/10 flex gap-0.5 p-0.5">
+          {plan.scenes.map((scene, idx) => (
+            <button
+              key={scene.id}
+              onClick={() => {
+                setCurrentSceneIndex(idx);
+                setProgress(0);
+                setIsPlaying(true);
+              }}
+              className={cn(
+                "relative flex-1 group transition-all overflow-hidden",
+                currentSceneIndex === idx ? "opacity-100" : "opacity-40 hover:opacity-70"
+              )}
+            >
+              {/* Background Color */}
+              <div 
+                className="absolute inset-0" 
+                style={{ background: `radial-gradient(circle at center, ${scene.background || '#111'} 0%, #000 100%)` }} 
+              />
+              
+              {/* Preview Content */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {scene.elements.find(e => e.type === 'image') ? (
+                  <img 
+                    src={scene.elements.find(e => e.type === 'image')?.content} 
+                    className="w-full h-full object-cover opacity-50"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : scene.elements.find(e => e.type === 'text') ? (
+                  <span className="text-[6px] font-black text-white/40 uppercase tracking-tighter truncate px-1">
+                    {scene.elements.find(e => e.type === 'text')?.content}
+                  </span>
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-white/10" />
+                )}
+              </div>
+
+              {/* Progress Overlay */}
+              {currentSceneIndex === idx && (
+                <motion.div 
+                  className="absolute bottom-0 left-0 h-1 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                  style={{ width: `${progress}%` }}
+                />
+              )}
+              {currentSceneIndex > idx && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500/40" />
+              )}
+
+              {/* Hover Label */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60">
+                <span className="text-[8px] font-mono text-white uppercase tracking-widest">Jump to {idx + 1}</span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 

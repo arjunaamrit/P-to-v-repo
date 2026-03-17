@@ -1,6 +1,7 @@
 export interface AnimationPlan {
   title: string;
   scenes: Scene[];
+  audioUrl?: string;
 }
 
 export interface Scene {
@@ -9,6 +10,7 @@ export interface Scene {
   background: string; // color or theme
   elements: AnimationElement[];
   narration: string;
+  transition?: 'fade' | 'slide-left' | 'slide-right' | 'zoom';
 }
 
 export interface AnimationElement {

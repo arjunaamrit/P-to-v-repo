@@ -49,11 +49,23 @@ export default function App() {
       setStage('scripting');
       const script = await generateScript(detailedPrompt, context);
       
-      // 4. Scene Planning
+      // 4. Voice (Narration) - Full Script
+      setStage('narrating');
+      const fullAudioUrl = await generateNarrationAudio(script);
+
+      // 5. Image Generation - Key Images
+      setStage('imaging');
+      const keyImages = await Promise.all([
+        generateImage(`Main concept of ${prompt}`),
+        generateImage(`Historical context of ${prompt}`),
+        generateImage(`Scientific mechanics of ${prompt}`)
+      ]);
+      
+      // 6. Scene Planning
       setStage('planning');
       const scenes = await planScenes(script);
       
-      // 5. Animation Plan
+      // 7. Animation Plan
       setStage('animating');
       const generatedPlan = await generateAnimationPlan(scenes);
       
@@ -61,32 +73,22 @@ export default function App() {
         throw new Error("Failed to generate animation plan.");
       }
 
-      // 6. Image Generation
-      setStage('imaging');
-      const scenesWithImages = await Promise.all(generatedPlan.scenes.map(async (scene) => {
-        const elementsWithImages = await Promise.all(scene.elements.map(async (el) => {
-          if (el.type === 'image') {
-            const imageUrl = await generateImage(el.content);
-            return { ...el, content: imageUrl || el.content };
+      // Finalizing - Map pre-generated images to plan if AI didn't use them
+      // (Simplified mapping for MVP)
+      const finalizedScenes = generatedPlan.scenes.map((scene, idx) => {
+        const elements = scene.elements.map((el, elIdx) => {
+          if (el.type === 'image' && !el.content.startsWith('data:')) {
+            // Use one of our key images if the AI just gave a prompt
+            const img = keyImages[idx % keyImages.length];
+            return { ...el, content: img || el.content };
           }
           return el;
-        }));
-        return { ...scene, elements: elementsWithImages };
-      }));
-
-      // 7. Voice (Narration)
-      setStage('narrating');
-      const scenesWithAudio = await Promise.all(scenesWithImages.map(async (scene) => {
-        try {
-          const audioUrl = scene.narration ? await generateNarrationAudio(scene.narration) : "";
-          return { ...scene, audioUrl };
-        } catch (audioErr) {
-          return { ...scene };
-        }
-      }));
+        });
+        return { ...scene, elements };
+      });
 
       setStage('finalizing');
-      setPlan({ ...generatedPlan, scenes: scenesWithAudio });
+      setPlan({ ...generatedPlan, scenes: finalizedScenes, audioUrl: fullAudioUrl });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
@@ -134,7 +136,7 @@ export default function App() {
                         handleGenerate();
                       }
                     }}
-                    placeholder="Enter a scientific or historical topic..."
+                    placeholder="Enter a topic to create something visually..."
                     className="flex-1 bg-transparent border-none outline-none px-6 py-1 text-2xl placeholder:text-zinc-700 font-light tracking-tight resize-none min-h-[160px]"
                     disabled={isGenerating}
                   />
@@ -178,10 +180,10 @@ export default function App() {
                     <StageBadge active={stage === 'quantifying'} icon={<Cpu size={10} />} label="QUANTIFY" />
                     <StageBadge active={stage === 'searching'} icon={<History size={10} />} label="SEARCH" />
                     <StageBadge active={stage === 'scripting'} icon={<Wand2 size={10} />} label="SCRIPT" />
-                    <StageBadge active={stage === 'planning'} icon={<Layout size={10} />} label="SCENES" />
-                    <StageBadge active={stage === 'animating'} icon={<Sparkles size={10} />} label="ANIMATE" />
-                    <StageBadge active={stage === 'imaging'} icon={<ImageIcon size={10} />} label="IMAGE" />
                     <StageBadge active={stage === 'narrating'} icon={<PlayCircle size={10} />} label="VOICE" />
+                    <StageBadge active={stage === 'imaging'} icon={<ImageIcon size={10} />} label="IMAGE" />
+                    <StageBadge active={stage === 'planning'} icon={<Layout size={10} />} label="SCENE" />
+                    <StageBadge active={stage === 'animating'} icon={<Sparkles size={10} />} label="ANIMATE" />
                   </div>
                   
                   <p className="text-2xl font-bold tracking-tight">

@@ -283,8 +283,9 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
     1. Output ONLY the JSON object.
     2. Elements: text, shape, icon, character, image.
     3. Animations: fade, slide, bounce, zoom.
-    4. Coordinates: 0-100.
-    5. For "image" elements, the "content" should be a descriptive prompt for an image generator.
+    4. Transitions: fade, slide-left, slide-right, zoom.
+    5. Coordinates: 0-100.
+    6. For "image" elements, use provided image URLs if available, otherwise describe a prompt.
   `;
 
   try {
@@ -312,6 +313,7 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
                   duration: { type: Type.NUMBER },
                   background: { type: Type.STRING },
                   narration: { type: Type.STRING },
+                  transition: { type: Type.STRING, enum: ["fade", "slide-left", "slide-right", "zoom"] },
                   elements: {
                     type: Type.ARRAY,
                     items: {
