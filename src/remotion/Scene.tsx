@@ -1,13 +1,26 @@
 import React from 'react';
-import { AbsoluteFill } from 'remotion';
+import { AbsoluteFill, Audio, useVideoConfig } from 'remotion';
 import { Scene as SceneType } from '../types';
 import { Element } from './Element';
 
 export const Scene: React.FC<{ scene: SceneType }> = ({ scene }) => {
+  const { fps } = useVideoConfig();
+
   return (
     <AbsoluteFill style={{ backgroundColor: scene.background }}>
       {(scene.elements || []).map((el, i) => (
         <Element key={i} element={el} />
+      ))}
+
+      {/* Sound Effects */}
+      {(scene.soundEffects || []).map((sfx, i) => (
+        <Audio
+          key={i}
+          src={sfx.url}
+          startFrom={0}
+          startInScene={Math.floor(sfx.startTime * fps)}
+          volume={sfx.volume || 0.5}
+        />
       ))}
       
       {/* Subtitles */}

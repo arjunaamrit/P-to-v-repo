@@ -281,11 +281,16 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
 
     STRICT RULES:
     1. Output ONLY the JSON object.
-    2. Elements: text, shape, icon, character, image.
-    3. Animations: fade, slide, bounce, zoom.
-    4. Transitions: fade, slide-left, slide-right, zoom.
+    2. Elements: text, shape, icon, character, image, interactive-button.
+    3. Animations: fade, slide, bounce, zoom, wave, point, nod.
+    4. Transitions: fade, slide-left, slide-right, zoom, wipe, flip, none.
     5. Coordinates: 0-100.
     6. For "image" elements, use provided image URLs if available, otherwise describe a prompt.
+    7. Use "intensity" (0.5 to 2.0) to control animation speed/scale.
+    8. Use "direction" for "slide" animations to control entry point.
+    9. Use "delay" (seconds) to offset the animation start within its scene window.
+    10. Use "duration" (seconds) to control how long the animation takes to complete.
+    11. Add "soundEffects" to scenes for impactful moments (e.g., "whoosh", "ding", "sparkle"). Use descriptive names for URLs (e.g., "https://assets.mixkit.co/sfx/preview/mixkit-fast-whoosh-1182.mp3").
   `;
 
   try {
@@ -313,14 +318,26 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
                   duration: { type: Type.NUMBER },
                   background: { type: Type.STRING },
                   narration: { type: Type.STRING },
-                  transition: { type: Type.STRING, enum: ["fade", "slide-left", "slide-right", "zoom"] },
+                  transition: { type: Type.STRING, enum: ["fade", "slide-left", "slide-right", "zoom", "wipe", "flip", "none"] },
+                  soundEffects: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      required: ["url", "startTime"],
+                      properties: {
+                        url: { type: Type.STRING },
+                        startTime: { type: Type.NUMBER },
+                        volume: { type: Type.NUMBER }
+                      }
+                    }
+                  },
                   elements: {
                     type: Type.ARRAY,
                     items: {
                       type: Type.OBJECT,
                       required: ["type", "content", "position", "animation", "startTime", "endTime"],
                       properties: {
-                        type: { type: Type.STRING, enum: ["text", "shape", "icon", "character", "image"] },
+                        type: { type: Type.STRING, enum: ["text", "shape", "icon", "character", "image", "interactive-button"] },
                         content: { type: Type.STRING },
                         position: {
                           type: Type.OBJECT,
@@ -330,9 +347,14 @@ export async function generateAnimationPlan(sceneDescriptions: string[], retryCo
                             y: { type: Type.NUMBER }
                           }
                         },
-                        animation: { type: Type.STRING, enum: ["fade", "slide", "bounce", "zoom"] },
+                        animation: { type: Type.STRING, enum: ["fade", "slide", "bounce", "zoom", "wave", "point", "nod"] },
                         startTime: { type: Type.NUMBER },
-                        endTime: { type: Type.NUMBER }
+                        endTime: { type: Type.NUMBER },
+                        intensity: { type: Type.NUMBER },
+                        direction: { type: Type.STRING, enum: ["left", "right", "top", "bottom"] },
+                        delay: { type: Type.NUMBER },
+                        duration: { type: Type.NUMBER },
+                        action: { type: Type.STRING }
                       }
                     }
                   }

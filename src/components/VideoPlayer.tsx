@@ -19,6 +19,7 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const playedSfxRef = useRef<Set<string>>(new Set());
 
   const currentScene = plan.scenes[currentSceneIndex];
 
@@ -29,6 +30,12 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
       </div>
     );
   }
+
+  const playSfx = (url: string, volume: number = 0.5) => {
+    const audio = new Audio(url);
+    audio.volume = volume;
+    audio.play().catch(e => console.warn("SFX play failed:", e));
+  };
 
   useEffect(() => {
     if (isPlaying) {
@@ -58,20 +65,32 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
             cumulative += plan.scenes[i].duration;
           }
           
+          if (foundIndex !== currentSceneIndex) {
+            playedSfxRef.current.clear();
+            setCurrentSceneIndex(foundIndex);
+          }
+
+          // Check for sound effects in the current scene
+          const sceneElapsed = currentTime - cumulative;
+          const scene = plan.scenes[foundIndex];
+          if (scene.soundEffects) {
+            scene.soundEffects.forEach((sfx, idx) => {
+              const sfxId = `${foundIndex}-${idx}`;
+              if (sceneElapsed >= sfx.startTime && !playedSfxRef.current.has(sfxId)) {
+                playSfx(sfx.url, sfx.volume);
+                playedSfxRef.current.add(sfxId);
+              }
+            });
+          }
+
           if (currentTime >= totalDuration) {
             setIsPlaying(false);
             setCurrentSceneIndex(plan.scenes.length - 1);
             setProgress(100);
           } else {
-            setCurrentSceneIndex(foundIndex);
-            const sceneElapsed = currentTime - cumulative;
             const sceneProgress = (sceneElapsed / plan.scenes[foundIndex].duration) * 100;
             setProgress(sceneProgress);
           }
-        } else {
-          // Fallback for no audio
-          const duration = currentScene.duration * 1000;
-          // ... existing fallback logic if needed ...
         }
       }, 50);
     } else {
@@ -82,7 +101,7 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, plan.audioUrl]);
+  }, [isPlaying, plan.audioUrl, currentSceneIndex]);
 
   const handleNextScene = () => {
     if (currentSceneIndex < plan.scenes.length - 1) {
@@ -176,6 +195,19 @@ export default function VideoPlayer({ plan }: VideoPlayerProps) {
                       referrerPolicy="no-referrer"
                     />
                   </div>
+                )}
+                {el.type === 'interactive-button' && (
+                  <button
+                    onClick={() => {
+                      if (el.action === 'pause') setIsPlaying(false);
+                      else if (el.action === 'play') setIsPlaying(true);
+                      else if (el.action === 'reset') reset();
+                      else console.log(`Action triggered: ${el.action}`);
+                    }}
+                    className="px-6 py-3 bg-white text-black rounded-full font-bold shadow-xl hover:scale-105 transition-transform active:scale-95 whitespace-nowrap"
+                  >
+                    {el.content}
+                  </button>
                 )}
               </motion.div>
             ))}
